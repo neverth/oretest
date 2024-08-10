@@ -27,6 +27,7 @@ use crate::jito_send_and_confirm::{JitoTips, subscribe_jito_tips};
 
 
 async fn fetch_data(client: &reqwest::Client, url: &str) -> Result<Response, String> {
+    println!("req {}", url);
     let timeout_duration = Duration::from_secs(80);
     match timeout(timeout_duration, client.get(url).send()).await {
         Ok(response) => match response {
@@ -77,12 +78,20 @@ impl Miner {
 
             let results = join_all(vec![
                 fetch_data(&client, &format!(
-                    "http://192.168.31.155:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}",
-                    cutoff_time, 10, config.min_difficulty, proof.challenge),
+                    "http://192.168.31.155:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
+                    cutoff_time, 16, config.min_difficulty, proof.challenge, 102, 0),
                 ),
                 fetch_data(&client, &format!(
-                    "http://192.168.31.155:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}",
-                    cutoff_time, 10, config.min_difficulty, proof.challenge),
+                    "http://192.168.31.178:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
+                    cutoff_time, 12, config.min_difficulty, proof.challenge, 102, 16),
+                ),
+                fetch_data(&client, &format!(
+                    "http://127.0.0.1:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
+                    cutoff_time, 10, config.min_difficulty, proof.challenge, 102, 28),
+                ),
+                fetch_data(&client, &format!(
+                    "http://39.107.87.200:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
+                    cutoff_time, 64, config.min_difficulty, proof.challenge, 102, 38),
                 ),
             ])
                 .await;

@@ -15,6 +15,8 @@ struct QueryParams {
     threads: Option<u64>,
     min_difficulty: Option<u64>,
     challenge: Option<String>,
+    total_div: Option<u64>,
+    start_idx: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -56,6 +58,8 @@ impl Miner {
                     params.cutoff_time.unwrap_or(0),
                     params.threads.unwrap_or(0),
                     params.min_difficulty.unwrap_or(0) as u32,
+                    params.total_div.unwrap(),
+                    params.start_idx.unwrap(),
                 );
 
                 let response = Response {
@@ -80,6 +84,8 @@ fn find_hash_par(
     cutoff_time: u64,
     threads: u64,
     min_difficulty: u32,
+    total_div: u64,
+    start_idx: u64,
 ) -> (Solution, u64) {
     // Dispatch job to each thread
     let handles: Vec<_> = (0..threads)
@@ -88,7 +94,8 @@ fn find_hash_par(
                 let mut memory = equix::SolverMemory::new();
                 move || {
                     let timer = Instant::now();
-                    let mut nonce = u64::MAX.saturating_div(threads).saturating_mul(i);
+                    let mut nonce = u64::MAX.saturating_div(total_div).saturating_mul(i + start_idx);
+                    println!("nonce {}, total div {}, now idx, {}", nonce, total_div, i + start_idx);
                     let mut best_nonce = nonce;
                     let mut best_difficulty = 0;
                     let mut best_hash = Hash::default();
