@@ -1,19 +1,22 @@
 use std::{sync::Arc, time::Instant};
-
+use std::time::Duration;
 use colored::*;
 use drillx::{
     equix::{self},
     Hash, Solution,
 };
+use futures_util::future::join_all;
 use ore_api::{
     consts::{BUS_ADDRESSES, BUS_COUNT, EPOCH_DURATION},
     state::{Config, Proof},
 };
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 use solana_rpc_client::spinner;
 use solana_sdk::signer::Signer;
 use tokio::sync::RwLock;
+use tokio::time::timeout;
 use crate::{
     args::MineArgs,
     send_and_confirm::ComputeBudget,
@@ -21,6 +24,27 @@ use crate::{
     Miner,
 };
 use crate::jito_send_and_confirm::{JitoTips, subscribe_jito_tips};
+
+
+async fn fetch_data(client: &reqwest::Client, url: &str) -> Result<Response, String> {
+    let timeout_duration = Duration::from_secs(80);
+    match timeout(timeout_duration, client.get(url).send()).await {
+        Ok(response) => match response {
+            Ok(resp) => resp.json::<Response>().await.map_err(|e| e.to_string()),
+            Err(e) => Err(e.to_string()),
+        },
+        Err(_) => Err("Timeout error".to_string()),
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Response {
+    d: [u8; 16],
+    n: [u8; 8],
+    challenge: String,
+    best_difficulty: u64,
+}
+
 
 impl Miner {
     pub async fn mine(&self, args: MineArgs) {
@@ -48,13 +72,51 @@ impl Miner {
 
             // Run drillx
             let config = get_config(&self.rpc_client).await;
-            let solution = Self::find_hash_par(
-                proof,
-                cutoff_time,
-                args.threads,
-                config.min_difficulty as u32,
-            )
-            .await;
+
+            let client = reqwest::Client::new();
+
+            let results = join_all(vec![
+                fetch_data(&client, &format!(
+                    "http://127.0.0.1:8000/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}",
+                    cutoff_time, 10, config.min_difficulty, proof.challenge),
+                ),
+            ])
+                .await;
+
+            let mut best_response = Response {
+                d: [0u8; 16],
+                n: [0u8; 8],
+                challenge: String::new(),
+                best_difficulty: 0,
+            };
+
+            for (i, result) in results.iter().enumerate() {
+                match result {
+                    Ok(response) => {
+                        println!("Result {}: {:?}", i + 1, response);
+
+                        if response.best_difficulty >= best_response.best_difficulty {
+                            best_response.d = response.d;
+                            best_response.n = response.n;
+                            best_response.best_difficulty = response.best_difficulty;
+                        }
+                    }
+                    Err(e) => println!("Error in Result {}: {}", i + 1, e),
+                }
+            }
+
+            println!("best_response {:?}", best_response);
+
+            let solution = Solution::new(best_response.d, best_response.n);
+
+            //
+            // let solution = Self::find_hash_par(
+            //     proof,
+            //     cutoff_time,
+            //     args.threads,
+            //     config.min_difficulty as u32,
+            // )
+            //     .await;
 
             // Submit most difficult hash
             let mut compute_budget = 500_000;

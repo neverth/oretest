@@ -16,7 +16,7 @@ mod stake;
 mod upgrade;
 mod utils;
 mod jito_send_and_confirm;
-
+mod main_client;
 use std::sync::Arc;
 
 use args::*;
@@ -51,6 +51,9 @@ enum Commands {
 
     #[command(about = "Claim your mining rewards")]
     Claim(ClaimArgs),
+
+    #[command(about = "Claim your mining rewards")]
+    Client(ClaimArgs),
 
     #[command(about = "Close your account to recover rent")]
     Close(CloseArgs),
@@ -181,6 +184,9 @@ async fn main() {
         }
         Commands::Claim(args) => {
             miner.claim(args).await;
+        }
+        Commands::Client(args) => {
+            miner.client(args).await;
         }
         Commands::Close(_) => {
             miner.close().await;
