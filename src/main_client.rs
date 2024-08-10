@@ -70,7 +70,7 @@ impl Miner {
                 warp::reply::json(&response)
             });
 
-        warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
+        warp::serve(routes).run(([0, 0, 0, 0], 6789)).await;
     }
 }
 

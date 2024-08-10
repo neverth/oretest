@@ -77,7 +77,11 @@ impl Miner {
 
             let results = join_all(vec![
                 fetch_data(&client, &format!(
-                    "http://127.0.0.1:8000/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}",
+                    "http://192.168.31.155:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}",
+                    cutoff_time, 10, config.min_difficulty, proof.challenge),
+                ),
+                fetch_data(&client, &format!(
+                    "http://192.168.31.155:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}",
                     cutoff_time, 10, config.min_difficulty, proof.challenge),
                 ),
             ])
