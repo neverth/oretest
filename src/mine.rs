@@ -1,4 +1,5 @@
 use std::{sync::Arc, time::Instant};
+use std::error::Error;
 use std::time::Duration;
 use colored::*;
 use drillx::{
@@ -59,14 +60,22 @@ impl Miner {
         let tips = Arc::new(RwLock::new(JitoTips::default()));
         subscribe_jito_tips(tips.clone()).await;
 
+        let mut last_reward: u64 = 0;
+        let mut last_use: u64 = 0;
+
         // Start mining loop
         loop {
             // Fetch proof
             let proof = get_proof_with_authority(&self.rpc_client, signer.pubkey()).await;
             println!(
-                "\nStake balance: {} ORE",
-                amount_u64_to_string(proof.balance)
+                "\nStake balance: {} ORE, reward diff {}, fee {}, diff {}",
+                amount_u64_to_string(proof.balance),
+                amount_u64_to_string(proof.balance - last_reward),
+                amount_u64_to_string(last_use),
+                amount_u64_to_string(proof.balance - last_reward - last_use),
             );
+
+            last_reward = proof.balance;
 
             // Calc cutoff time
             let cutoff_time = self.get_cutoff(proof, args.buffer_time).await;
@@ -77,22 +86,22 @@ impl Miner {
             let client = reqwest::Client::new();
 
             let results = join_all(vec![
+                // fetch_data(&client, &format!(
+                //     "http://192.168.31.155:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
+                //     cutoff_time, 16, config.min_difficulty, proof.challenge, 60, 0),
+                // ),
                 fetch_data(&client, &format!(
-                    "http://192.168.31.155:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 16, config.min_difficulty, proof.challenge, 102, 0),
+                    "http://127.0.0.1:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
+                    cutoff_time, 16, config.min_difficulty, proof.challenge, 28, 0),
                 ),
                 fetch_data(&client, &format!(
                     "http://192.168.31.178:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 12, config.min_difficulty, proof.challenge, 102, 16),
+                    cutoff_time, 12, config.min_difficulty, proof.challenge, 28, 16),
                 ),
-                fetch_data(&client, &format!(
-                    "http://127.0.0.1:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 10, config.min_difficulty, proof.challenge, 102, 28),
-                ),
-                fetch_data(&client, &format!(
-                    "http://39.107.87.200:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 64, config.min_difficulty, proof.challenge, 102, 38),
-                ),
+                // fetch_data(&client, &format!(
+                //     "http://47.105.60.162:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
+                //     cutoff_time, 32, config.min_difficulty, proof.challenge, 4, 12),
+                // ),
             ])
                 .await;
 
@@ -108,6 +117,8 @@ impl Miner {
                     Ok(response) => {
                         println!("Result {}: {:?}", i + 1, response);
 
+                        tokio::spawn(client.get(format!("http://154.9.28.82:8090/metric?name=ore_diffculty&type=gauge&method=set&value={}&tags=[\"id\"]&tag_values=[\"{}\"]", response.best_difficulty, i)).send());
+
                         if response.best_difficulty >= best_response.best_difficulty {
                             best_response.d = response.d;
                             best_response.n = response.n;
@@ -117,6 +128,8 @@ impl Miner {
                     Err(e) => println!("Error in Result {}: {}", i + 1, e),
                 }
             }
+
+            tokio::spawn(client.get(format!("http://154.9.28.82:8090/metric?name=ore_diffculty&type=gauge&method=set&value={}&tags=[\"id\"]&tag_values=[\"{}\"]", best_response.best_difficulty, 999)).send());
 
             println!("best_response {:?}", best_response);
 
@@ -144,9 +157,17 @@ impl Miner {
                 find_bus(),
                 solution,
             ));
-            self.jito_send_and_confirm(&ixs, ComputeBudget::Fixed(compute_budget), false, tips.clone())
-                .await
-                .ok();
+            let confirm_resp = self.jito_send_and_confirm(&ixs, ComputeBudget::Fixed(compute_budget), false, tips.clone(), best_response.best_difficulty)
+                .await;
+
+            println!("{:?}", confirm_resp);
+
+            match confirm_resp {
+                Ok(value) => {
+                    last_use = ((value * 10000000000) as f64 * 1.75) as u64
+                }
+                Err(_) => {}
+            }
         }
     }
 

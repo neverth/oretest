@@ -79,7 +79,7 @@ impl Miner {
         sleep(std::time::Duration::from_secs(1)).await;
         // Send and confirm
         ixs.push(ore_api::instruction::claim(pubkey, beneficiary, amount));
-        self.jito_send_and_confirm(&ixs, ComputeBudget::Fixed(CU_LIMIT_CLAIM), false, tips)
+        self.jito_send_and_confirm(&ixs, ComputeBudget::Fixed(CU_LIMIT_CLAIM), false, tips, 0)
             .await
             .ok();
     }

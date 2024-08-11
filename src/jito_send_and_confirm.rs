@@ -63,7 +63,6 @@ pub const JITO_RECIPIENTS: [Pubkey; 8] = [
     // pubkey!("9ttgPBBhRYFuQccdR1DSnb7hydsWANoDsV3P9kaGMCEh"),
     // pubkey!("E2eSqe33tuhAHKTrwky5uEjaVqnb2T9ns6nHHUrN8588"),
     // pubkey!("aTtUk2DHgLhKZRDjePq6eiHRKC1XXFMBiSUfQ2JNDbN"),
-
 ];
 
 #[derive(Debug, Error)]
@@ -142,7 +141,8 @@ impl Miner {
         compute_budget: ComputeBudget,
         skip_confirm: bool,
         tips: Arc<RwLock<JitoTips>>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+        difficulty: u64,
+    ) -> Result<(u64), Box<dyn std::error::Error>> {
         let progress_bar = spinner::new_progress_bar();
         let signer = self.signer();
         let client = self.rpc_client.clone();
@@ -171,17 +171,28 @@ impl Miner {
                 final_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(cus))
             }
         }
+
+        let mut priority_fee: u64 = self.priority_fee;
+
+        if difficulty >= 21 {
+            priority_fee = 5000 + (difficulty - 21) * 1000
+        } else {
+            priority_fee = difficulty * 100
+        }
+
+        println!("use priority_fee {}", priority_fee);
+
         final_ixs.push(ComputeBudgetInstruction::set_compute_unit_price(
-            self.priority_fee,
+            priority_fee,
         ));
         final_ixs.extend_from_slice(ixs);
 
-        let mut tip = self.priority_fee.clone();
+        let mut tip = priority_fee.clone();
         if self.max_adaptive_tip > 0 {
             let tips = *tips.read().await;
 
             if tips.p25() > 0 {
-                tip = self.max_adaptive_tip.min(tips.p25() + self.priority_fee);
+                tip = self.max_adaptive_tip.min(tips.p25() + priority_fee);
             }
         }
         final_ixs.push(build_bribe_ix(&signer.pubkey(), tip));
@@ -234,7 +245,7 @@ impl Miner {
             )
                 .await {
                 Ok(()) => {
-                    return Ok(());
+                    return Ok((priority_fee));
                 }
 
                 Err(e) => {
@@ -272,7 +283,7 @@ impl Miner {
             }
 
             // Retry
-            sleep(Duration::from_millis(400*attempts)).await;
+            sleep(Duration::from_millis(400 * attempts)).await;
 
             attempts += 1;
             if attempts > 3 {
@@ -283,11 +294,7 @@ impl Miner {
                 }));
             }
         }
-
-
     }
-
-
 }
 
 async fn make_jito_request<T>(method: &'static str, params: Value) -> eyre::Result<T>
@@ -337,7 +344,7 @@ pub async fn send_bundle_with_confirmation<T>(
 where
     T: tonic::client::GrpcService<tonic::body::BoxBody> + Send + 'static + Clone,
     T::Error: Into<StdError>,
-    T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+    T::ResponseBody: Body<Data=Bytes> + Send + 'static,
     <T::ResponseBody as Body>::Error: Into<StdError> + Send,
     <T as tonic::client::GrpcService<tonic::body::BoxBody>>::Future: std::marker::Send,
 {
@@ -444,7 +451,7 @@ pub async fn send_bundle_no_wait<T>(
 where
     T: tonic::client::GrpcService<tonic::body::BoxBody> + Send + 'static + Clone,
     T::Error: Into<StdError>,
-    T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+    T::ResponseBody: Body<Data=Bytes> + Send + 'static,
     <T::ResponseBody as Body>::Error: Into<StdError> + Send,
     <T as tonic::client::GrpcService<tonic::body::BoxBody>>::Future: std::marker::Send,
 {
