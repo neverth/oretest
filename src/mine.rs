@@ -192,9 +192,12 @@ impl Miner {
 
             match confirm_resp {
                 Ok(value) => {
-                    last_use = ((value * 10000000000) as f64 * 1.75) as u64
+                    last_use = ((value * 10000000000) as f64 * 1.75) as u64;
+                    tokio::spawn(client.get("http://154.9.28.82:8090/metric?name=ore_fee_counter&type=counter&method=add&value=1&tags=[\"is_succ\"]&tag_values=[\"true\"]").send());
                 }
-                Err(_) => {}
+                Err(_) => {
+                    tokio::spawn(client.get("http://154.9.28.82:8090/metric?name=ore_fee_counter&type=counter&method=add&value=1&tags=[\"is_succ\"]&tag_values=[\"false\"]").send());
+                }
             }
         }
     }

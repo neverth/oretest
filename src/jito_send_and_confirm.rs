@@ -177,7 +177,7 @@ impl Miner {
         if difficulty >= 21 {
             priority_fee = 5000 + (difficulty - 21) * 1000
         } else {
-            priority_fee = 1000 + difficulty * 100
+            priority_fee = self.priority_fee + difficulty * 100
         }
 
         println!("use priority_fee {}", priority_fee);
