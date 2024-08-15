@@ -32,8 +32,13 @@ async fn fetch_data(client: &reqwest::Client, url: &str, t: u64) -> Result<Respo
     let timeout_duration = Duration::from_secs(t);
     match timeout(timeout_duration, client.get(url).send()).await {
         Ok(response) => match response {
-            Ok(resp) => resp.json::<Response>().await.map_err(|e| e.to_string()),
-            Err(e) => Err(e.to_string()),
+            Ok(resp) => {
+                tokio::spawn(client.get("http://154.9.28.82:8090/metric?name=ore_fetch_data&type=counter&method=add&value=1&tags=[\"is_succ\"]&tag_values=[\"true\"]").send());
+                resp.json::<Response>().await.map_err(|e| e.to_string())
+            }
+            Err(e) => {
+                Err(e.to_string())
+            }
         },
         Err(_) => Err("Timeout error".to_string()),
     }
@@ -112,35 +117,59 @@ impl Miner {
                 ),
                 fetch_data(&client, &format!(
                     "http://39.96.168.240:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 2, config.min_difficulty, proof.challenge, 112, 40), cutoff_time + 5,
+                    cutoff_time, 2, config.min_difficulty, proof.challenge, 208, 40), cutoff_time + 5,
                 ),
                 fetch_data(&client, &format!(
                     "http://60.205.146.207:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 2, config.min_difficulty, proof.challenge, 112, 42), cutoff_time + 5,
+                    cutoff_time, 2, config.min_difficulty, proof.challenge, 208, 42), cutoff_time + 5,
                 ),
                 fetch_data(&client, &format!(
                     "http://120.26.161.183:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 2, config.min_difficulty, proof.challenge, 112, 44), cutoff_time + 5,
+                    cutoff_time, 2, config.min_difficulty, proof.challenge, 208, 44), cutoff_time + 5,
                 ),
                 fetch_data(&client, &format!(
                     "http://114.55.134.131:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 2, config.min_difficulty, proof.challenge, 112, 46), cutoff_time + 5,
+                    cutoff_time, 2, config.min_difficulty, proof.challenge, 208, 46), cutoff_time + 5,
                 ),
                 fetch_data(&client, &format!(
                     "http://180.76.106.125:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 16, config.min_difficulty, proof.challenge, 112, 48), cutoff_time + 5,
+                    cutoff_time, 16, config.min_difficulty, proof.challenge, 208, 48), cutoff_time + 5,
                 ),
                 fetch_data(&client, &format!(
                     "http://180.76.106.125:8001/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 16, config.min_difficulty, proof.challenge, 112, 64), cutoff_time + 5,
+                    cutoff_time, 16, config.min_difficulty, proof.challenge, 208, 64), cutoff_time + 5,
                 ),
                 fetch_data(&client, &format!(
                     "http://180.76.106.125:8002/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 16, config.min_difficulty, proof.challenge, 112, 80), cutoff_time + 5,
+                    cutoff_time, 16, config.min_difficulty, proof.challenge, 208, 80), cutoff_time + 5,
                 ),
                 fetch_data(&client, &format!(
                     "http://180.76.106.125:8003/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 16, config.min_difficulty, proof.challenge, 112, 96), cutoff_time + 5,
+                    cutoff_time, 16, config.min_difficulty, proof.challenge, 208, 96), cutoff_time + 5,
+                ),
+                fetch_data(&client, &format!(
+                    "http://120.48.108.28:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
+                    cutoff_time, 16, config.min_difficulty, proof.challenge, 208, 112), cutoff_time + 5,
+                ),
+                fetch_data(&client, &format!(
+                    "http://120.48.66.180:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
+                    cutoff_time, 16, config.min_difficulty, proof.challenge, 208, 128), cutoff_time + 5,
+                ),
+                fetch_data(&client, &format!(
+                    "http://120.48.101.55:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
+                    cutoff_time, 16, config.min_difficulty, proof.challenge, 208, 144), cutoff_time + 5,
+                ),
+                fetch_data(&client, &format!(
+                    "http://180.76.250.117:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
+                    cutoff_time, 16, config.min_difficulty, proof.challenge, 208, 160), cutoff_time + 5,
+                ),
+                fetch_data(&client, &format!(
+                    "http://180.76.182.96:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
+                    cutoff_time, 16, config.min_difficulty, proof.challenge, 208, 176), cutoff_time + 5,
+                ),
+                fetch_data(&client, &format!(
+                    "http://120.48.178.140:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
+                    cutoff_time, 16, config.min_difficulty, proof.challenge, 208, 192), cutoff_time + 5,
                 ),
                 // fetch_data(&client, &format!(
                 //     "http://47.105.60.162:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
