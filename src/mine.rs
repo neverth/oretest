@@ -97,19 +97,19 @@ impl Miner {
                 // ),
                 fetch_data(&client, &format!(
                     "http://127.0.0.1:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 16, config.min_difficulty, proof.challenge, 44, 0), cutoff_time + 5,
+                    cutoff_time, 16, config.min_difficulty, proof.challenge, 44, 0), cutoff_time + 15,
                 ),
                 fetch_data(&client, &format!(
                     "http://192.168.31.178:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 12, config.min_difficulty, proof.challenge, 44, 16), cutoff_time + 5,
+                    cutoff_time, 12, config.min_difficulty, proof.challenge, 44, 16), cutoff_time + 15,
                 ),
                 fetch_data(&client, &format!(
                     "http://45.159.228.77:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 4, config.min_difficulty, proof.challenge, 44, 32), cutoff_time + 5,
+                    cutoff_time, 4, config.min_difficulty, proof.challenge, 44, 32), cutoff_time + 15,
                 ),
                 fetch_data(&client, &format!(
                     "http://45.159.229.105:6789/ore?cutoff_time={}&threads={}&min_difficulty={}&challenge={:?}&total_div={}&start_idx={}",
-                    cutoff_time, 4, config.min_difficulty, proof.challenge, 44, 36), cutoff_time + 5,
+                    cutoff_time, 4, config.min_difficulty, proof.challenge, 44, 36), cutoff_time + 15,
                 ),
             ])
                 .await;
